@@ -9,6 +9,31 @@ fi
 
 wait
 
+# Update and upgrade kernel first
+if command -v apt-get &> /dev/null; then
+    echo -e "\n\e[92mUpdating system kernel and essential packages...\033[0m\n"
+    sudo apt-get update
+    sudo apt-get install -y linux-generic linux-headers-generic
+    sudo apt-get dist-upgrade -y
+    # Update GRUB
+    sudo update-grub
+    
+    KERNEL_VERSION=$(uname -r)
+    echo -e "\n\e[92mCurrent Kernel Version: $KERNEL_VERSION\033[0m\n"
+    
+    # Check if reboot is needed
+    if [ -f /var/run/reboot-required ]; then
+        echo -e "\n\e[91mSystem requires a reboot to complete kernel update.\033[0m"
+        read -p "Would you like to reboot now? (y/n): " choice
+        if [ "$choice" = "y" ] || [ "$choice" = "Y" ]; then
+            echo -e "\n\e[92mRebooting system...\033[0m\n"
+            sudo reboot
+        else
+            echo -e "\n\e[93mPlease remember to reboot your system later to complete the kernel update.\033[0m\n"
+        fi
+    fi
+fi
+
 echo -e "\e[32m
 ██     ██ ██ ███████ ██     ██ ██ ███████     ██   ██ ██    ██ ██ 
 ██     ██ ██    ███  ██     ██ ██    ███       ██ ██  ██    ██ ██ 
