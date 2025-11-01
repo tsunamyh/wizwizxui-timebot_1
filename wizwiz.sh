@@ -22,21 +22,50 @@ echo -e "    \e[31mTelegram Channel: \e[34m@wizwizch\033[0m | \e[31mTelegram Gro
 echo -e "\e[32mInstalling WizWiz script ... \033[0m\n"
 sleep 5
 
-sudo apt update && apt upgrade -y
+if command -v apt-get &> /dev/null; then
+    # For Ubuntu/Debian
+    sudo apt update && apt upgrade -y
+    PKG=(
+        lamp-server^
+        libapache2-mod-php 
+        mysql-server 
+        apache2 
+        php-mbstring 
+        php-zip 
+        php-gd 
+        php-json 
+        php-curl 
+    )
+elif command -v dnf &> /dev/null; then
+    # For newer Fedora/RHEL systems
+    sudo dnf update -y
+    PKG=(
+        @lamp-server-httpd
+        php-mysqlnd
+        mariadb-server
+        httpd
+        php-mbstring
+        php-zip
+        php-gd
+        php-json
+        php-curl
+    )
+elif command -v yum &> /dev/null; then
+    # For older RHEL/CentOS systems
+    sudo yum update -y
+    PKG=(
+        @lamp-server-httpd
+        php-mysqlnd
+        mariadb-server
+        httpd
+        php-mbstring
+        php-zip
+        php-gd
+        php-json
+        php-curl
+    )
+fi
 echo -e "\e[92mThe server was successfully updated ...\033[0m\n"
-
-
-PKG=(
-    lamp-server^
-    libapache2-mod-php 
-    mysql-server 
-    apache2 
-    php-mbstring 
-    php-zip 
-    php-gd 
-    php-json 
-    php-curl 
-)
 
 for i in "${PKG[@]}"
 do
@@ -61,10 +90,23 @@ echo 'phpmyadmin phpmyadmin/app-password-confirm password $randomdbpasstxt69' | 
 echo 'phpmyadmin phpmyadmin/mysql/admin-pass password $randomdbpasstxt69' | debconf-set-selections
 echo 'phpmyadmin phpmyadmin/mysql/app-pass password $randomdbpasstxt69' | debconf-set-selections
 echo 'phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2' | debconf-set-selections
-sudo apt-get install phpmyadmin -y
-sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
-sudo a2enconf phpmyadmin.conf
-sudo systemctl restart apache2
+if command -v apt-get &> /dev/null; then
+    # For Ubuntu/Debian
+    sudo apt-get install phpmyadmin -y
+    sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+    sudo a2enconf phpmyadmin.conf
+    sudo systemctl restart apache2
+elif command -v dnf &> /dev/null; then
+    # For newer Fedora/RHEL systems
+    sudo dnf install phpMyAdmin -y
+    sudo ln -s /etc/phpMyAdmin/apache.conf /etc/httpd/conf.d/phpMyAdmin.conf
+    sudo systemctl restart httpd
+elif command -v yum &> /dev/null; then
+    # For older RHEL/CentOS systems
+    sudo yum install phpMyAdmin -y
+    sudo ln -s /etc/phpMyAdmin/apache.conf /etc/httpd/conf.d/phpMyAdmin.conf
+    sudo systemctl restart httpd
+fi
 
 wait
 

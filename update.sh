@@ -22,17 +22,34 @@ do
 			echo " "
 			if [ "$answer" != "${answer#[Yy]}" ]; then
 			mv /var/www/html/wizwizxui-timebot/baseInfo.php /root/
-			sudo apt-get install -y git
-			sudo apt-get install -y wget
-			sudo apt-get install -y unzip
-			sudo apt install curl -y
+			if command -v apt-get &> /dev/null; then
+				# For Ubuntu/Debian
+				sudo apt-get update
+				sudo apt-get install -y git wget unzip curl php php-mysql php-fpm
+			elif command -v dnf &> /dev/null; then
+				# For newer Fedora/RHEL systems
+				sudo dnf install -y git wget unzip curl php php-mysqlnd php-fpm
+			elif command -v yum &> /dev/null; then
+				# For older RHEL/CentOS systems
+				sudo yum install -y git wget unzip curl php php-mysqlnd php-fpm
+			fi
 			echo -e "\n\e[92mUpdating ...\033[0m\n"
 			sleep 4
 			rm -r /var/www/html/wizwizxui-timebot/
 			echo -e "\n\e[92mWait a few seconds ...\033[0m\n"
 			sleep 3
 			git clone https://github.com/wizwizdev/wizwizxui-timebot.git /var/www/html/wizwizxui-timebot
-			sudo chown -R www-data:www-data /var/www/html/wizwizxui-timebot/
+			# Set correct permissions based on web server user
+			if getent group www-data > /dev/null; then
+				# For Ubuntu/Debian systems using www-data
+				sudo chown -R www-data:www-data /var/www/html/wizwizxui-timebot/
+			elif getent group apache > /dev/null; then
+				# For RHEL/CentOS systems using apache
+				sudo chown -R apache:apache /var/www/html/wizwizxui-timebot/
+			elif getent group nginx > /dev/null; then
+				# For systems using nginx
+				sudo chown -R nginx:nginx /var/www/html/wizwizxui-timebot/
+			fi
 			sudo chmod -R 755 /var/www/html/wizwizxui-timebot/
 			sleep 3
 			mv /root/baseInfo.php /var/www/html/wizwizxui-timebot/
