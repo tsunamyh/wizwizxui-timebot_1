@@ -194,36 +194,47 @@ echo "Folder created successfully!"
 wait
 
 
-if [ ! -d "/root/confwizwiz" ]; then
+## Ensure /root/confwizwiz/dbrootwizwiz.txt exists and MySQL root has a usable password
+CONF_DIR="/root/confwizwiz"
+CONF_FILE="$CONF_DIR/dbrootwizwiz.txt"
 
-    sudo mkdir /root/confwizwiz
-    
+if [ ! -d "$CONF_DIR" ] || [ ! -f "$CONF_FILE" ]; then
+    sudo mkdir -p "$CONF_DIR"
+    sudo chmod 700 "$CONF_DIR"
+
     sleep 1
-    
-    touch /root/confwizwiz/dbrootwizwiz.txt
-    sudo chmod -R 777 /root/confwizwiz/dbrootwizwiz.txt
-    sleep 1
-    
-    randomdbpasstxt=$(openssl rand -base64 10 | tr -dc 'a-zA-Z0-9' | cut -c1-30)
+
+    # generate a secure random password for MySQL root
+    RANDOMDBPASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | cut -c1-24)
 
     ASAS="$"
 
-    echo "${ASAS}user = 'root';" >> /root/confwizwiz/dbrootwizwiz.txt
-    echo "${ASAS}pass = '${randomdbpasstxt}';" >> /root/confwizwiz/dbrootwizwiz.txt
-    #echo "${ASAS}paths = '${RANDOM_CODE}';" >> /root/confwizwiz/dbrootwizwiz.txt
-    
-    sleep 1
+    sudo tee "$CONF_FILE" > /dev/null <<EOF
+${ASAS}user = 'root';
+${ASAS}pass = '${RANDOMDBPASS}';
+${ASAS}path = '${RANDOM_CODE}';
+EOF
 
-    passs=$(cat /root/confwizwiz/dbrootwizwiz.txt | grep '$pass' | cut -d"'" -f2)
-    userrr=$(cat /root/confwizwiz/dbrootwizwiz.txt | grep '$user' | cut -d"'" -f2)
+    sudo chmod 600 "$CONF_FILE"
 
-    sudo mysql -u $userrr -p$passs -e "alter user '$userrr'@'localhost' identified with mysql_native_password by '$passs';FLUSH PRIVILEGES;"
+    # Try to set MySQL root password (works on default Ubuntu MySQL installs)
+    if sudo mysql --execute="SELECT 1;" &>/dev/null; then
+        sudo mysql <<SQL || true
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${RANDOMDBPASS}';
+FLUSH PRIVILEGES;
+SQL
+    else
+        echo -e "\n\e[33mWarning: cannot run mysql client as root without password.\nIf MySQL is using auth_socket or a different root auth method, set the root password manually and update $CONF_FILE\033[0m\n"
+    fi
 
-    echo "SELECT 1" | mysql -u$userrr -p$passs 2>/dev/null
-
-    echo "Folder created successfully!"
+    # test mysql connection
+    if echo "SELECT 1" | mysql -u root -p"${RANDOMDBPASS}" &>/dev/null; then
+        echo "Root MySQL password set and stored in $CONF_FILE"
+    else
+        echo -e "\n\e[33mNotice: unable to verify MySQL root login with the generated password.\nYou may need to set root password manually and update $CONF_FILE accordingly.\033[0m\n"
+    fi
 else
-    echo "Folder already exists."
+    echo "Config folder and file already exist."
 fi
 
 clear

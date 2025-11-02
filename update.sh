@@ -11,6 +11,29 @@ wait
 
 echo " "
 
+### Ensure conf file exists so delete/update operations can read DB root credentials
+CONF_DIR="/root/confwizwiz"
+CONF_FILE="$CONF_DIR/dbrootwizwiz.txt"
+if [ ! -d "$CONF_DIR" ] || [ ! -f "$CONF_FILE" ]; then
+	sudo mkdir -p "$CONF_DIR"
+	sudo chmod 700 "$CONF_DIR"
+	RANDOMDBPASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | cut -c1-24)
+	ASAS="$"
+	sudo tee "$CONF_FILE" > /dev/null <<EOF
+${ASAS}user = 'root';
+${ASAS}pass = '${RANDOMDBPASS}';
+${ASAS}path = '';
+EOF
+	sudo chmod 600 "$CONF_FILE"
+	# Try set root password if possible
+	if sudo mysql --execute="SELECT 1;" &>/dev/null; then
+		sudo mysql <<SQL || true
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${RANDOMDBPASS}';
+FLUSH PRIVILEGES;
+SQL
+	fi
+fi
+
 PS3=" Please Select Action: "
 options=("Update bot" "Update panel" "Backup" "Delete" "Donate" "Exit")
 select opt in "${options[@]}"
